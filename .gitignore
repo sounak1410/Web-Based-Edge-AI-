@@ -210,3 +210,8 @@ __marimo__/
 chat_logs.txt
 slm-env/
 venv/
+
+# My Custom Secret and Cache Ignores
+.env
+__pycache__/
+*.pyc

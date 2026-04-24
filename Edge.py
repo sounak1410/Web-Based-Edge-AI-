@@ -3,10 +3,16 @@ from flask import Flask, request, jsonify, render_template_string, redirect, ses
 from transformers import GPT2Config, GPT2LMHeadModel, AutoTokenizer, pipeline
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# 1. Load the vault
+load_dotenv() 
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)  # Needed for sessions to work
-PASSWORD = "676767" 
+
+# 2. Grab the values using os.getenv
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+PASSWORD = os.getenv("APP_PASSWORD")
 
 # --- YOUR ORIGINAL CODE: PART 1 (THE BRAIN) ---
 config = GPT2Config(
@@ -38,11 +44,14 @@ print("\n--- TinyLlama Web Chatbot Activated! ---")
 # --- FLASK STUFF (just the web wrapper) ---
 @app.before_request
 def check_auth():
-    if request.path == '/login':
+    # Allow the login page and static assets to load without auth
+    if request.path == '/login' or request.path.startswith('/static'):
         return None
-    if request.cookies.get('auth') != PASSWORD:
+        
+    # Check the session instead of the raw cookie
+    if not session.get('logged_in'):
         return redirect('/login')
-
+    
 LOGIN_HTML = """
 <html><body style="font-family:sans-serif;max-width:300px;margin:auto;padding-top:100px">
 <h2>Enter Password</h2>
@@ -67,10 +76,10 @@ def login():
     if request.method == 'POST':
         pw = request.json.get('password')
         if pw == PASSWORD:
-            resp = jsonify({"ok": True})
-            resp.set_cookie('auth', PASSWORD)
-            return resp
-        return jsonify({"ok": False})
+            # Instead of a cookie with the password, set a session flag
+            session['logged_in'] = True
+            return jsonify({"ok": True})
+        return jsonify({"ok": False}), 401
     return render_template_string(LOGIN_HTML)
 
 HTML = """
